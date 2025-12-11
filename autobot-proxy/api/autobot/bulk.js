@@ -1,4 +1,8 @@
-export const config = { runtime: "edge" };
+export const config = {
+  runtime: "nodejs18.x" // Serverless Node runtime instead of Edge
+};
+
+import fetch from "node-fetch";
 
 // Retry helper
 async function fetchWithRetry(url, retries = 3) {
@@ -29,17 +33,11 @@ async function fetchInBatches(items, batchSize = 20) {
   return results;
 }
 
-export default async function handler(req) {
+export default async function handler(req, res) {
   const centersUrl =
     "http://autobot.multilentjmb.com:8080/autobotmonitor/cms/545975484454/api/centers/centers_with_systems";
 
   try {
-    // Cache (1 minute)
-    const cacheKey = "autobot_bulk_cache";
-    const cache = caches.default;
-    const cached = await cache.match(cacheKey);
-    if (cached) return cached;
-
     // Step 1 — fetch centers
     const centers = await fetchWithRetry(centersUrl);
     if (!centers) throw new Error("Failed to fetch centers");
@@ -47,16 +45,9 @@ export default async function handler(req) {
     // Step 2 — fetch exams in batches
     const exams = await fetchInBatches(centers, 20);
 
-    const responseBody = JSON.stringify({ centers, exams });
-
-    // Save to cache
-    await cache.put(cacheKey, new Response(responseBody, {
-      headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=60" }
-    }));
-
-    return new Response(responseBody, { headers: { "Content-Type": "application/json" } });
+    return res.status(200).json({ centers, exams });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { headers: { "Content-Type": "application/json" } });
+    return res.status(500).json({ error: err.message });
   }
 }
