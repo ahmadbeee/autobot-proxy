@@ -1,9 +1,0 @@
-{
-  "name": "autobot-proxy",
-  "version": "1.0.0",
-  "main": "index.js",
-  "dependencies": {
-    "express": "latest",
-    "node-fetch": "2.6.7"
-  }
-}
