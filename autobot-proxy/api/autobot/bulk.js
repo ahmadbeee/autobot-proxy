@@ -1,5 +1,5 @@
 export const config = {
-  runtime: "nodejs18.x" // Serverless Node runtime instead of Edge
+  runtime: "nodejs" // Serverless Node runtime instead of Edge
 };
 
 import fetch from "node-fetch";
@@ -51,3 +51,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
+
