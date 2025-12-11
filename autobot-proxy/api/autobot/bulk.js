@@ -1,27 +1,71 @@
 export const config = {
-  runtime: 'edge'
+  runtime: "edge"
 };
+
+// Simple retry function
+async function fetchWithRetry(url, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (res.ok) return res.json();
+    } catch (e) {}
+    await new Promise(r => setTimeout(r, 300));
+  }
+  return null;
+}
 
 export default async function handler(req) {
   const centersUrl =
     "http://autobot.multilentjmb.com:8080/autobotmonitor/cms/545975484454/api/centers/centers_with_systems";
 
-  try {
-    const res = await fetch(centersUrl);
-    const centers = await res.json();
+  // Cache key
+  const cacheKey = "autobot_bulk_cache";
+  const cache = caches.default;
 
-    const examRequests = centers.map(c =>
-      fetch(
-        `http://autobot.multilentjmb.com:8080/autobotmonitor/cms/545975484454/api/centers/center_last_exam?ref=${c.Ref}`
+  // Check cache first
+  const cached = await cache.match(cacheKey);
+  if (cached) {
+    return new Response(await cached.text(), {
+      headers: { "Content-Type": "application/json", "X-Cache": "HIT" }
+    });
+  }
+
+  try {
+    // Fetch all centers
+    const centers = await fetchWithRetry(centersUrl, 3);
+    if (!centers) throw new Error("Failed to fetch centers");
+
+    // Fetch exams in parallel
+    const exams = await Promise.all(
+      centers.map(center =>
+        fetchWithRetry(
+          `http://autobot.multilentjmb.com:8080/autobotmonitor/cms/545975484454/api/centers/center_last_exam?ref=${center.referenceNumber}`,
+          3
+        ).then(res => ({
+          ref: center.referenceNumber,
+          data: res
+        }))
       )
-        .then(r => r.json())
-        .catch(() => ({ error: "failed", ref: c.Ref }))
     );
 
-    const examResults = await Promise.all(examRequests);
+    const responseBody = JSON.stringify({ centers, exams });
 
-    return new Response(JSON.stringify(examResults), {
-      headers: { "Content-Type": "application/json" }
+    // Put into cache for 1 minute
+    await cache.put(
+      cacheKey,
+      new Response(responseBody, {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "public, max-age=60"
+        }
+      })
+    );
+
+    return new Response(responseBody, {
+      headers: {
+        "Content-Type": "application/json",
+        "X-Cache": "MISS"
+      }
     });
 
   } catch (err) {
