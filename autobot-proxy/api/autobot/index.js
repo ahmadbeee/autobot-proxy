@@ -1,5 +1,5 @@
 export const config = {
-  runtime: 'edge'
+  runtime: "edge"
 };
 
 export default async function handler(req) {
@@ -7,22 +7,17 @@ export default async function handler(req) {
   const endpoint = searchParams.get("endpoint");
   const ref = searchParams.get("ref");
 
-  let apiUrl;
+  let url = null;
 
   if (endpoint === "centers") {
-    apiUrl =
-      "http://autobot.multilentjmb.com:8080/autobotmonitor/cms/545975484454/api/centers/centers_with_systems";
-
+    url = "http://autobot.multilentjmb.com:8080/autobotmonitor/cms/545975484454/api/centers/centers_with_systems";
   } else if (endpoint === "center_last_exam") {
-    if (!ref) {
-      return new Response(JSON.stringify({ error: "Missing ref parameter" }), {
+    if (!ref)
+      return new Response(JSON.stringify({ error: "Missing ref" }), {
         headers: { "Content-Type": "application/json" }
       });
-    }
 
-    apiUrl =
-      `http://autobot.multilentjmb.com:8080/autobotmonitor/cms/545975484454/api/centers/center_last_exam?ref=${ref}`;
-
+    url = `http://autobot.multilentjmb.com:8080/autobotmonitor/cms/545975484454/api/centers/center_last_exam?ref=${ref}`;
   } else {
     return new Response(JSON.stringify({ error: "Invalid endpoint" }), {
       headers: { "Content-Type": "application/json" }
@@ -30,14 +25,14 @@ export default async function handler(req) {
   }
 
   try {
-    const response = await fetch(apiUrl);
-    const data = await response.text();
-    return new Response(data, {
+    const res = await fetch(url, { cache: "no-store" });
+    const text = await res.text();
+
+    return new Response(text, {
       headers: { "Content-Type": "application/json" }
     });
-
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), {
       headers: { "Content-Type": "application/json" }
     });
   }
