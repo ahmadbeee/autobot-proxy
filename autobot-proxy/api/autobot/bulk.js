@@ -1,6 +1,4 @@
-export const config = {
-  runtime: "nodejs18.x" // Serverless Node, not Edge
-};
+export const config = { runtime: "nodejs" }; // use "nodejs" for serverless
 
 import fetch from "node-fetch";
 
@@ -38,11 +36,9 @@ export default async function handler(req, res) {
     "http://autobot.multilentjmb.com:8080/autobotmonitor/cms/545975484454/api/centers/centers_with_systems";
 
   try {
-    // Step 1 — fetch all centers
     const centers = await fetchWithRetry(centersUrl);
     if (!centers) throw new Error("Failed to fetch centers");
 
-    // Step 2 — fetch exams in batches
     const exams = await fetchInBatches(centers, 20);
 
     return res.status(200).json({ centers, exams });
