@@ -1,4 +1,4 @@
-export const config = { runtime: "nodejs" };
+export const config = { runtime: "edge" };
 
 import fetch from "node-fetch";
 
@@ -64,3 +64,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
+
